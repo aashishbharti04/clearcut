@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Enables crossOriginIsolated → multi-threaded WASM → much faster AI. Must load first. -->
+  <script src="coi-serviceworker.js"></script>
   <title>ClearCut — Remove Image Backgrounds Instantly</title>
   <meta name="description" content="Remove the background from any image for free, right in your browser. No upload, no sign-up — your images never leave your device." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
