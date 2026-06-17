@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClearCut — Remove Image Backgrounds Instantly</title>
+  <meta name="description" content="Remove the background from any image for free, right in your browser. No upload, no sign-up — your images never leave your device." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="bg-blobs" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
+
+  <header class="nav">
+    <a href="#" class="logo"><span class="logo-mark">✂</span> Clear<span class="accent">Cut</span></a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="https://github.com/aashishbharti04/clearcut" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Remove image backgrounds <span class="grad">instantly</span>.</h1>
+      <p class="sub">
+        100% free and private — the AI runs <b>in your browser</b>. Your images never
+        leave your device. No sign-up, no watermark, no limits.
+      </p>
+
+      <!-- dropzone -->
+      <div id="dropzone" class="dropzone" tabindex="0" role="button"
+           aria-label="Upload an image">
+        <input id="file-input" type="file" accept="image/*" hidden />
+        <div class="dz-inner">
+          <div class="dz-icon">⬆️</div>
+          <p class="dz-title">Drop an image here, or <span class="accent">browse</span></p>
+          <p class="dz-hint">or paste from clipboard · PNG, JPG, WEBP</p>
+          <button class="btn btn-primary" id="browse-btn" type="button">Upload Image</button>
+          <button class="btn btn-ghost" id="sample-btn" type="button">Try a sample</button>
+        </div>
+      </div>
+
+      <!-- workspace (hidden until an image is chosen) -->
+      <div id="workspace" class="workspace" hidden>
+        <div class="panels">
+          <figure class="panel">
+            <figcaption>Original</figcaption>
+            <div class="img-wrap"><img id="original-img" alt="original" /></div>
+          </figure>
+          <figure class="panel">
+            <figcaption>Background removed</figcaption>
+            <div class="img-wrap checker">
+              <img id="result-img" alt="result" hidden />
+              <div id="loader" class="loader">
+                <div class="spinner"></div>
+                <p id="loader-text">Loading AI model…</p>
+                <div class="progress"><span id="progress-bar"></span></div>
+              </div>
+            </div>
+          </figure>
+        </div>
+        <div class="actions">
+          <a id="download-btn" class="btn btn-primary" download="clearcut.png" hidden>⬇ Download PNG</a>
+          <button id="reset-btn" class="btn btn-ghost" type="button">Try another</button>
+        </div>
+        <p id="error-msg" class="error" hidden></p>
+      </div>
+    </section>
+
+    <section id="how" class="how">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div class="step"><span class="step-n">1</span><b>Upload</b><p>Drop, browse, or paste any image.</p></div>
+        <div class="step"><span class="step-n">2</span><b>AI cuts it out</b><p>A segmentation model removes the background — on-device.</p></div>
+        <div class="step"><span class="step-n">3</span><b>Download</b><p>Get a transparent PNG, instantly.</p></div>
+      </div>
+      <p class="privacy">🔒 Privacy by design: images are processed locally and never uploaded to any server.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Built with <a href="https://github.com/aashishbharti04/clearcut" target="_blank" rel="noopener">ClearCut</a>
+    · in-browser AI · ⭐ it on GitHub
+  </footer>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
