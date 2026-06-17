@@ -6,10 +6,10 @@
  * ========================================================================== */
 const SOCIALS = {
   github: "https://github.com/aashishbharti04",
-  linkedin: "",      // e.g. "https://www.linkedin.com/in/your-handle"
+  linkedin: "https://www.linkedin.com/in/aashana1012",
   twitter: "",       // e.g. "https://x.com/your-handle"
-  instagram: "",     // e.g. "https://instagram.com/your-handle"
-  youtube: "",       // e.g. "https://youtube.com/@your-handle"
+  instagram: "https://www.instagram.com/asurwave1012",
+  youtube: "https://www.youtube.com/@CodeWithAsur",
   website: "",       // e.g. "https://yoursite.com"
   email: "corerankdigital@gmail.com",
 };
@@ -147,11 +147,16 @@ async function processImage(source) {
     const removeBackground = await getRemover();
     loaderText.textContent = "Removing background…";
     const blob = await removeBackground(source, {
+      model: "isnet_fp16", // smaller + faster than the default full model
       progress: (key, current, total) => {
-        if (total) {
-          const pct = Math.round((current / total) * 100);
+        if (key && key.includes("fetch")) {
+          const pct = total ? Math.round((current / total) * 100) : 0;
           progressBar.style.width = pct + "%";
-          if (key && key.includes("fetch")) loaderText.textContent = `Downloading model… ${pct}%`;
+          loaderText.textContent = `Downloading model… ${pct}% (first time only)`;
+        } else {
+          // download done — now the CPU does the actual cut-out
+          progressBar.style.width = "100%";
+          loaderText.textContent = "Removing background… (a few seconds)";
         }
       },
       output: { format: "image/png" },
