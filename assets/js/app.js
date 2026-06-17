@@ -1,25 +1,65 @@
-/* ClearCut — in-browser background removal. No server, no upload.
+/* ClearCut — in-browser background removal + replacement. No server, no upload.
  * Uses @imgly/background-removal (ONNX/WASM) loaded lazily from a CDN. */
 
+/* ============================================================================
+ *  YOUR SOCIAL LINKS — fill in your handles/URLs (leave "" to hide an icon).
+ * ========================================================================== */
+const SOCIALS = {
+  github: "https://github.com/aashishbharti04",
+  linkedin: "",      // e.g. "https://www.linkedin.com/in/your-handle"
+  twitter: "",       // e.g. "https://x.com/your-handle"
+  instagram: "",     // e.g. "https://instagram.com/your-handle"
+  youtube: "",       // e.g. "https://youtube.com/@your-handle"
+  website: "",       // e.g. "https://yoursite.com"
+  email: "corerankdigital@gmail.com",
+};
+
+const ICONS = {
+  github: '<path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.79 2.73 1.27 3.4.97.1-.75.4-1.27.73-1.56-2.56-.29-5.26-1.28-5.26-5.7 0-1.26.45-2.29 1.2-3.1-.12-.3-.52-1.46.11-3.05 0 0 .98-.31 3.2 1.18a11.1 11.1 0 0 1 5.83 0c2.22-1.5 3.2-1.18 3.2-1.18.63 1.59.23 2.75.11 3.05.75.81 1.2 1.84 1.2 3.1 0 4.43-2.7 5.4-5.27 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/>',
+  linkedin: '<path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14ZM7.12 20.45H3.55V9h3.57v11.45ZM22.22 0H1.77C.8 0 0 .77 0 1.73v20.54C0 23.23.8 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z"/>',
+  twitter: '<path d="M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.41l-5.8-7.58-6.64 7.58H.46l8.6-9.83L0 1.15h7.6l5.24 6.93 6.06-6.93Zm-1.29 19.5h2.04L6.48 3.24H4.3l13.31 17.41Z"/>',
+  instagram: '<path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16ZM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.12 1.38C1.35 2.67.94 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.8.72 1.47 1.38 2.13.66.66 1.33 1.07 2.12 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56a5.9 5.9 0 0 0 2.13-1.38 5.9 5.9 0 0 0 1.38-2.13c.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91a5.9 5.9 0 0 0-1.38-2.12A5.9 5.9 0 0 0 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0Zm0 5.84a6.16 6.16 0 1 0 0 12.32 6.16 6.16 0 0 0 0-12.32ZM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm6.41-10.85a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88Z"/>',
+  youtube: '<path d="M23.5 6.2a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.51A3.02 3.02 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3.02 3.02 0 0 0 2.12 2.14c1.88.51 9.38.51 9.38.51s7.5 0 9.38-.51a3.02 3.02 0 0 0 2.12-2.14A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/>',
+  website: '<path d="M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm7.94 7h-3.38a15.6 15.6 0 0 0-1.34-3.46A8.03 8.03 0 0 1 19.94 7ZM12 2.04c.83 1.2 1.48 2.54 1.91 3.96h-3.82c.43-1.42 1.08-2.76 1.91-3.96ZM2.26 14a7.97 7.97 0 0 1 0-4h3.87a16.5 16.5 0 0 0 0 4H2.26Zm.8 2h3.38c.34 1.25.8 2.42 1.34 3.46A8.03 8.03 0 0 1 3.06 16Zm3.38-8H3.06a8.03 8.03 0 0 1 4.72-3.46A15.6 15.6 0 0 0 6.44 8ZM12 21.96c-.83-1.2-1.48-2.54-1.91-3.96h3.82A14.6 14.6 0 0 1 12 21.96ZM14.34 16H9.66a14.5 14.5 0 0 1 0-4h4.68a14.5 14.5 0 0 1 0 4Zm.32 3.46c.54-1.04 1-2.21 1.34-3.46h3.38a8.03 8.03 0 0 1-4.72 3.46ZM17.87 14a16.5 16.5 0 0 0 0-4h3.87a7.97 7.97 0 0 1 0 4h-3.87Z"/>',
+  email: '<path d="M22 4H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4.24-10 6.25L2 8.24V6l10 6.25L22 6v2.24Z"/>',
+};
+
+function renderSocials() {
+  const box = document.getElementById("socials");
+  if (!box) return;
+  const html = Object.entries(SOCIALS)
+    .filter(([, url]) => url)
+    .map(([name, url]) => {
+      const href = name === "email" ? `mailto:${url}` : url;
+      return `<a class="social" href="${href}" target="_blank" rel="noopener" aria-label="${name}" title="${name}">`
+        + `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${ICONS[name] || ""}</svg></a>`;
+    })
+    .join("");
+  box.innerHTML = html;
+}
+
+/* ========================================================================== */
 const $ = (id) => document.getElementById(id);
 
 const dropzone = $("dropzone");
 const fileInput = $("file-input");
 const workspace = $("workspace");
 const originalImg = $("original-img");
-const resultImg = $("result-img");
+const canvas = $("result-canvas");
 const loader = $("loader");
 const loaderText = $("loader-text");
 const progressBar = $("progress-bar");
 const downloadBtn = $("download-btn");
 const errorMsg = $("error-msg");
+const bgControls = $("bg-controls");
 
 const SAMPLE_URL =
   "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=80";
+const PRESETS = ["#00e5ff", "#ff2e97", "#00ffa3", "#9d4eff", "#ffffff", "#000000", "#ff6b35"];
 
+const state = { cutout: null, bgType: "transparent", bgColor: "#00e5ff", bgImage: null, format: "png" };
 let _removeBackground = null;
 
-// Lazy-load the library only when the user actually needs it.
 async function getRemover() {
   if (_removeBackground) return _removeBackground;
   loaderText.textContent = "Loading AI model… (first time only)";
@@ -36,29 +76,76 @@ function showError(msg) {
 
 function resetUI() {
   workspace.hidden = true;
-  resultImg.hidden = true;
+  canvas.hidden = true;
   downloadBtn.hidden = true;
+  bgControls.hidden = true;
   errorMsg.hidden = true;
   loader.hidden = false;
   progressBar.style.width = "0%";
   fileInput.value = "";
+  state.cutout = null;
+  state.bgType = "transparent";
+  state.bgImage = null;
 }
 
+// ---- compositing ----------------------------------------------------------
+function drawCover(ctx, img, w, h) {
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+  ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+}
+
+function paint(ctx, w, h, opaqueFallback) {
+  if (state.bgType === "color") {
+    ctx.fillStyle = state.bgColor; ctx.fillRect(0, 0, w, h);
+  } else if (state.bgType === "image" && state.bgImage) {
+    drawCover(ctx, state.bgImage, w, h);
+  } else if (opaqueFallback) {
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);
+  }
+  ctx.drawImage(state.cutout, 0, 0, w, h);
+}
+
+function render() {
+  if (!state.cutout) return;
+  const w = state.cutout.naturalWidth, h = state.cutout.naturalHeight;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+  paint(ctx, w, h, false);
+  canvas.hidden = false;
+  updateDownload();
+}
+
+function updateDownload() {
+  const w = state.cutout.naturalWidth, h = state.cutout.naturalHeight;
+  const ex = document.createElement("canvas");
+  ex.width = w; ex.height = h;
+  const isJpg = state.format === "jpg";
+  paint(ex.getContext("2d"), w, h, isJpg); // jpg can't be transparent → white fallback
+  const mime = isJpg ? "image/jpeg" : "image/png";
+  ex.toBlob((blob) => {
+    if (!blob) return;
+    downloadBtn.href = URL.createObjectURL(blob);
+    downloadBtn.download = `clearcut.${isJpg ? "jpg" : "png"}`;
+    downloadBtn.hidden = false;
+  }, mime, 0.92);
+}
+
+// ---- pipeline -------------------------------------------------------------
 async function processImage(source) {
   errorMsg.hidden = true;
   workspace.hidden = false;
-  resultImg.hidden = true;
+  canvas.hidden = true;
   downloadBtn.hidden = true;
+  bgControls.hidden = true;
   loader.hidden = false;
   progressBar.style.width = "0%";
-
-  // show the original
   originalImg.src = typeof source === "string" ? source : URL.createObjectURL(source);
 
   try {
     const removeBackground = await getRemover();
     loaderText.textContent = "Removing background…";
-
     const blob = await removeBackground(source, {
       progress: (key, current, total) => {
         if (total) {
@@ -70,12 +157,14 @@ async function processImage(source) {
       output: { format: "image/png" },
     });
 
-    const url = URL.createObjectURL(blob);
-    resultImg.src = url;
-    resultImg.hidden = false;
-    loader.hidden = true;
-    downloadBtn.href = url;
-    downloadBtn.hidden = false;
+    const img = new Image();
+    img.onload = () => {
+      state.cutout = img;
+      loader.hidden = true;
+      bgControls.hidden = false;
+      render();
+    };
+    img.src = URL.createObjectURL(blob);
   } catch (err) {
     console.error(err);
     showError(
@@ -85,16 +174,60 @@ async function processImage(source) {
   }
 }
 
-// ---- input handlers -------------------------------------------------------
 function handleFile(file) {
   if (!file || !file.type.startsWith("image/")) {
-    showError("Please choose an image file (PNG, JPG, or WEBP).");
     workspace.hidden = false;
+    showError("Please choose an image file (PNG, JPG, or WEBP).");
     return;
   }
   processImage(file);
 }
 
+// ---- background controls --------------------------------------------------
+function initControls() {
+  // preset swatches
+  const sw = $("swatches");
+  sw.innerHTML = PRESETS.map(
+    (c) => `<button class="swatch" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`
+  ).join("");
+  sw.addEventListener("click", (e) => {
+    const c = e.target.getAttribute("data-color");
+    if (!c) return;
+    state.bgColor = c; $("bg-color").value = c; state.bgType = "color";
+    setActiveChip("color"); $("color-row").hidden = false; render();
+  });
+
+  document.querySelectorAll(".chip[data-bg]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const type = btn.getAttribute("data-bg");
+      setActiveChip(type);
+      $("color-row").hidden = type !== "color";
+      if (type === "image") { $("bg-image-input").click(); return; }
+      state.bgType = type;
+      render();
+    }));
+
+  $("bg-color").addEventListener("input", (e) => {
+    state.bgColor = e.target.value; state.bgType = "color"; setActiveChip("color"); render();
+  });
+
+  $("bg-image-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => { state.bgImage = img; state.bgType = "image"; setActiveChip("image"); render(); };
+    img.src = URL.createObjectURL(file);
+  });
+
+  $("bg-format").addEventListener("change", (e) => { state.format = e.target.value; updateDownload(); });
+}
+
+function setActiveChip(type) {
+  document.querySelectorAll(".chip[data-bg]").forEach((b) =>
+    b.classList.toggle("active", b.getAttribute("data-bg") === type));
+}
+
+// ---- input wiring ---------------------------------------------------------
 $("browse-btn").addEventListener("click", (e) => { e.stopPropagation(); fileInput.click(); });
 dropzone.addEventListener("click", () => fileInput.click());
 dropzone.addEventListener("keydown", (e) => {
@@ -110,7 +243,6 @@ dropzone.addEventListener("drop", (e) => {
   if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 
-// paste from clipboard
 window.addEventListener("paste", (e) => {
   const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
   if (item) handleFile(item.getAsFile());
@@ -120,11 +252,15 @@ $("sample-btn").addEventListener("click", async (e) => {
   e.stopPropagation();
   try {
     const resp = await fetch(SAMPLE_URL);
-    const blob = await resp.blob();
-    processImage(blob);
+    processImage(await resp.blob());
   } catch (_) {
-    processImage(SAMPLE_URL); // let the library fetch it directly
+    processImage(SAMPLE_URL);
   }
 });
 
 $("reset-btn").addEventListener("click", resetUI);
+
+// ---- init -----------------------------------------------------------------
+renderSocials();
+initControls();
+const yr = $("year"); if (yr) yr.textContent = "2026";

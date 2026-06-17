@@ -54,9 +54,9 @@
             <div class="img-wrap"><img id="original-img" alt="original" /></div>
           </figure>
           <figure class="panel">
-            <figcaption>Background removed</figcaption>
+            <figcaption>Result</figcaption>
             <div class="img-wrap checker">
-              <img id="result-img" alt="result" hidden />
+              <canvas id="result-canvas" hidden></canvas>
               <div id="loader" class="loader">
                 <div class="spinner"></div>
                 <p id="loader-text">Loading AI model…</p>
@@ -65,8 +65,31 @@
             </div>
           </figure>
         </div>
+
+        <!-- background replacement controls -->
+        <div id="bg-controls" class="bg-controls" hidden>
+          <div class="ctl-group">
+            <span class="ctl-label">Background</span>
+            <button class="chip active" data-bg="transparent" type="button">Transparent</button>
+            <button class="chip" data-bg="color" type="button">Color</button>
+            <button class="chip" data-bg="image" type="button">Image</button>
+          </div>
+          <div class="ctl-group" id="color-row" hidden>
+            <input type="color" id="bg-color" value="#00e5ff" aria-label="Background color" />
+            <span class="swatches" id="swatches"></span>
+          </div>
+          <input type="file" id="bg-image-input" accept="image/*" hidden />
+          <div class="ctl-group">
+            <span class="ctl-label">Format</span>
+            <select id="bg-format" aria-label="Download format">
+              <option value="png">PNG (transparent)</option>
+              <option value="jpg">JPG</option>
+            </select>
+          </div>
+        </div>
+
         <div class="actions">
-          <a id="download-btn" class="btn btn-primary" download="clearcut.png" hidden>⬇ Download PNG</a>
+          <a id="download-btn" class="btn btn-primary" download="clearcut.png" hidden>⬇ Download</a>
           <button id="reset-btn" class="btn btn-ghost" type="button">Try another</button>
         </div>
         <p id="error-msg" class="error" hidden></p>
@@ -85,8 +108,11 @@
   </main>
 
   <footer class="footer">
-    Built with <a href="https://github.com/aashishbharti04/clearcut" target="_blank" rel="noopener">ClearCut</a>
-    · in-browser AI · ⭐ it on GitHub
+    <nav class="socials" id="socials" aria-label="Social links"></nav>
+    <p class="footer-text">
+      Built with <a href="https://github.com/aashishbharti04/clearcut" target="_blank" rel="noopener">ClearCut</a>
+      · in-browser AI · © <span id="year"></span> Aashish Bharti
+    </p>
   </footer>
 
   <script type="module" src="assets/js/app.js"></script>
