@@ -50,6 +50,12 @@
 
       <!-- workspace (hidden until an image is chosen) -->
       <div id="workspace" class="workspace" hidden>
+        <div class="mode-tabs">
+          <button class="tab active" id="tab-bg" type="button">🪄 Remove Background</button>
+          <button class="tab" id="tab-object" type="button">🧹 Remove Object</button>
+        </div>
+
+        <div id="bg-ui">
         <div class="panels">
           <figure class="panel">
             <figcaption>Original</figcaption>
@@ -100,6 +106,33 @@
           <a id="download-btn" class="btn btn-primary" download="clearcut.png" hidden>⬇ Download</a>
           <button id="reset-btn" class="btn btn-ghost" type="button">Try another</button>
         </div>
+        </div><!-- /bg-ui -->
+
+        <!-- object remover (inpainting) -->
+        <div id="object-ui" hidden>
+          <figure class="panel obj-panel">
+            <figcaption>🧹 Paint over what to remove, then click “Remove object”</figcaption>
+            <div class="img-wrap">
+              <canvas id="edit-canvas"></canvas>
+              <div id="obj-loader" class="loader" hidden>
+                <div class="spinner"></div>
+                <p>Filling in…</p>
+              </div>
+            </div>
+          </figure>
+          <div class="bg-controls">
+            <div class="ctl-group">
+              <span class="ctl-label">Brush</span>
+              <input type="range" id="obj-brush" min="6" max="120" value="36" aria-label="Brush size" />
+            </div>
+            <button class="chip" id="obj-clear" type="button">Clear mask</button>
+            <button class="btn btn-primary" id="obj-remove" type="button">✨ Remove object</button>
+            <button class="chip" id="obj-reset" type="button">↺ Start over</button>
+            <a class="btn btn-primary" id="obj-download" download="clearcut-cleaned.png" hidden>⬇ Download</a>
+          </div>
+          <button id="obj-try-another" class="btn btn-ghost" type="button" style="margin-top:14px">Try another image</button>
+        </div>
+
         <p id="error-msg" class="error" hidden></p>
       </div>
     </section>

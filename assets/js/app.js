@@ -58,10 +58,16 @@ const SAMPLE_URL =
 const PRESETS = ["#00e5ff", "#ff2e97", "#00ffa3", "#9d4eff", "#ffffff", "#000000", "#ff6b35"];
 
 const state = {
+  mode: "bg",           // "bg" | "object"
+  sourceFile: null,
+  originalImg: null,
+  bgDone: false,
   cutoutImg: null,      // pristine result (for reset)
   cutoutCanvas: null,   // mutable copy we erase into
   bgType: "transparent", bgColor: "#00e5ff", bgImage: null, format: "png",
   eraseMode: false, brush: 28, erasing: false,
+  // object remover
+  objWorking: null, objMask: null, objBrush: 36, objPainting: false,
 };
 let _removeBackground = null;
 
@@ -176,6 +182,7 @@ async function processImage(source) {
       cc.width = img.naturalWidth; cc.height = img.naturalHeight;
       cc.getContext("2d").drawImage(img, 0, 0);
       state.cutoutCanvas = cc;
+      state.bgDone = true;
       loader.hidden = true;
       bgControls.hidden = false;
       setEraseMode(false);
@@ -197,7 +204,37 @@ function handleFile(file) {
     showError("Please choose an image file (PNG, JPG, or WEBP).");
     return;
   }
-  processImage(file);
+  onImage(file);
+}
+
+// Load the original once, then run whichever tool is selected.
+function onImage(source) {
+  state.sourceFile = source;
+  state.bgDone = false;
+  state.objWorking = null;
+  workspace.hidden = false;
+  errorMsg.hidden = true;
+  const img = new Image();
+  img.onload = () => { state.originalImg = img; dispatchMode(); };
+  img.onerror = () => showError("Couldn't load that image.");
+  img.src = typeof source === "string" ? source : URL.createObjectURL(source);
+}
+
+function dispatchMode() {
+  if (state.mode === "bg") {
+    showModeUI("bg");
+    if (!state.bgDone) processImage(state.sourceFile);
+  } else {
+    showModeUI("object");
+    setupObject();
+  }
+}
+
+function showModeUI(mode) {
+  document.getElementById("bg-ui").hidden = mode !== "bg";
+  document.getElementById("object-ui").hidden = mode !== "object";
+  document.getElementById("tab-bg").classList.toggle("active", mode === "bg");
+  document.getElementById("tab-object").classList.toggle("active", mode === "object");
 }
 
 // ---- background controls --------------------------------------------------
@@ -314,15 +351,143 @@ $("sample-btn").addEventListener("click", async (e) => {
   e.stopPropagation();
   try {
     const resp = await fetch(SAMPLE_URL);
-    processImage(await resp.blob());
+    onImage(await resp.blob());
   } catch (_) {
-    processImage(SAMPLE_URL);
+    onImage(SAMPLE_URL);
   }
 });
 
 $("reset-btn").addEventListener("click", resetUI);
+$("obj-try-another").addEventListener("click", resetUI);
+
+// ---- mode tabs ------------------------------------------------------------
+$("tab-bg").addEventListener("click", () => { state.mode = "bg"; if (state.originalImg) dispatchMode(); else showModeUI("bg"); });
+$("tab-object").addEventListener("click", () => { state.mode = "object"; if (state.originalImg) dispatchMode(); else showModeUI("object"); });
+
+// ---- object remover (inpainting) -----------------------------------------
+const editCanvas = $("edit-canvas");
+
+function setupObject() {
+  if (!state.originalImg) return;
+  const w = state.originalImg.naturalWidth, h = state.originalImg.naturalHeight;
+  // working copy (so removals stack), and a mask layer
+  const wc = document.createElement("canvas"); wc.width = w; wc.height = h;
+  wc.getContext("2d").drawImage(state.originalImg, 0, 0);
+  state.objWorking = wc;
+  const mc = document.createElement("canvas"); mc.width = w; mc.height = h;
+  state.objMask = mc;
+  $("obj-download").hidden = true;
+  renderObject();
+}
+
+function renderObject() {
+  if (!state.objWorking) return;
+  const w = state.objWorking.width, h = state.objWorking.height;
+  editCanvas.width = w; editCanvas.height = h;
+  const ctx = editCanvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(state.objWorking, 0, 0);
+  ctx.save(); ctx.globalAlpha = 0.45; ctx.drawImage(state.objMask, 0, 0); ctx.restore();
+}
+
+function paintMaskAt(e) {
+  const mc = state.objMask; if (!mc) return;
+  const rect = editCanvas.getBoundingClientRect();
+  const sx = mc.width / rect.width, sy = mc.height / rect.height;
+  const x = (e.clientX - rect.left) * sx, y = (e.clientY - rect.top) * sy;
+  const r = (state.objBrush / 2) * sx;
+  const ctx = mc.getContext("2d");
+  ctx.fillStyle = "#ff2e97";
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  renderObject();
+}
+
+function removeObject() {
+  if (!state.objWorking || !state.objMask) return;
+  const w = state.objWorking.width, h = state.objWorking.height;
+  const maskData = state.objMask.getContext("2d").getImageData(0, 0, w, h).data;
+  const mask = new Uint8Array(w * h);
+  let any = false;
+  for (let i = 0; i < w * h; i++) { if (maskData[i * 4 + 3] > 10) { mask[i] = 1; any = true; } }
+  if (!any) { showError("Paint over the object you want to remove first."); return; }
+  errorMsg.hidden = true;
+  $("obj-loader").hidden = false;
+  // let the spinner paint before the (sync) heavy work
+  setTimeout(() => {
+    inpaint(state.objWorking, mask, w, h);
+    state.objMask.getContext("2d").clearRect(0, 0, w, h);
+    renderObject();
+    $("obj-loader").hidden = true;
+    state.objWorking.toBlob((b) => {
+      if (b) { $("obj-download").href = URL.createObjectURL(b); $("obj-download").hidden = false; }
+    }, "image/png");
+  }, 30);
+}
+
+// Content-aware fill: BFS fill from the hole boundary inward, then smooth.
+function inpaint(canvas, mask, w, h) {
+  const ctx = canvas.getContext("2d");
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const known = new Uint8Array(w * h);
+  const hole = [];
+  for (let i = 0; i < w * h; i++) { if (mask[i]) hole.push(i); else known[i] = 1; }
+
+  let remaining = hole.length, guard = 0;
+  while (remaining > 0 && guard++ < 5000) {
+    const toMark = [];
+    for (let k = 0; k < hole.length; k++) {
+      const p = hole[k]; if (known[p]) continue;
+      const x = p % w, y = (p / w) | 0;
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const q = ny * w + nx;
+        if (known[q]) { const o = q * 4; r += d[o]; g += d[o + 1]; b += d[o + 2]; n++; }
+      }
+      if (n) { const o = p * 4; d[o] = r / n; d[o + 1] = g / n; d[o + 2] = b / n; d[o + 3] = 255; toMark.push(p); }
+    }
+    if (!toMark.length) break;
+    for (const p of toMark) { known[p] = 1; remaining--; }
+  }
+
+  // smooth the filled region a few times to remove blockiness
+  for (let pass = 0; pass < 3; pass++) {
+    const copy = d.slice();
+    for (const p of hole) {
+      const x = p % w, y = (p / w) | 0;
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const o = (ny * w + nx) * 4; r += copy[o]; g += copy[o + 1]; b += copy[o + 2]; n++;
+      }
+      const o = p * 4; d[o] = r / n; d[o + 1] = g / n; d[o + 2] = b / n;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function initObjectControls() {
+  $("obj-brush").addEventListener("input", (e) => { state.objBrush = Number(e.target.value); });
+  $("obj-clear").addEventListener("click", () => {
+    if (state.objMask) { state.objMask.getContext("2d").clearRect(0, 0, state.objMask.width, state.objMask.height); renderObject(); }
+  });
+  $("obj-remove").addEventListener("click", removeObject);
+  $("obj-reset").addEventListener("click", setupObject);
+
+  const start = (e) => { state.objPainting = true; paintMaskAt(e); };
+  const move = (e) => { if (state.objPainting) { e.preventDefault(); paintMaskAt(e); } };
+  const end = () => { state.objPainting = false; };
+  editCanvas.addEventListener("pointerdown", start);
+  editCanvas.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", end);
+}
 
 // ---- init -----------------------------------------------------------------
 renderSocials();
 initControls();
+initObjectControls();
 const yr = $("year"); if (yr) yr.textContent = "2026";

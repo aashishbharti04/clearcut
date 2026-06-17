@@ -79,6 +79,18 @@ body {
 
 /* workspace */
 .workspace { margin-top: 28px; }
+
+/* mode tabs */
+.mode-tabs { display: inline-flex; gap: 4px; padding: 5px; margin-bottom: 18px;
+             background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.tab { font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; padding: 9px 18px;
+       border: none; border-radius: 10px; background: transparent; color: var(--muted); }
+.tab:hover { color: var(--text); }
+.tab.active { background: linear-gradient(135deg,var(--cyan),var(--purple)); color: #06121a; }
+
+/* object remover */
+.obj-panel { max-width: 640px; margin: 0 auto; }
+#edit-canvas { max-width: 100%; max-height: 460px; display: block; cursor: crosshair; touch-action: none; }
 .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
          padding: 14px; }
