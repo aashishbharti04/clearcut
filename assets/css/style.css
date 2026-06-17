@@ -14,6 +14,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* the [hidden] attribute must win over class display rules (flex/block/grid) */
+[hidden] { display: none !important; }
+
 body {
   font-family: Inter, system-ui, sans-serif;
   background: var(--bg);
@@ -120,6 +123,8 @@ body {
 .swatch:hover { transform: scale(1.12); }
 #bg-format { font: inherit; font-size: 13px; background: var(--surface-2); color: var(--text);
              border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+#brush-size { width: 90px; accent-color: var(--cyan); cursor: pointer; }
+.img-wrap canvas.erasing { cursor: crosshair; touch-action: none; }
 
 .actions { display: flex; gap: 12px; justify-content: center; margin-top: 22px; }
 .error { color: var(--magenta); margin-top: 16px; font-weight: 600; }

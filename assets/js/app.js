@@ -57,7 +57,12 @@ const SAMPLE_URL =
   "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=80";
 const PRESETS = ["#00e5ff", "#ff2e97", "#00ffa3", "#9d4eff", "#ffffff", "#000000", "#ff6b35"];
 
-const state = { cutout: null, bgType: "transparent", bgColor: "#00e5ff", bgImage: null, format: "png" };
+const state = {
+  cutoutImg: null,      // pristine result (for reset)
+  cutoutCanvas: null,   // mutable copy we erase into
+  bgType: "transparent", bgColor: "#00e5ff", bgImage: null, format: "png",
+  eraseMode: false, brush: 28, erasing: false,
+};
 let _removeBackground = null;
 
 async function getRemover() {
@@ -83,9 +88,11 @@ function resetUI() {
   loader.hidden = false;
   progressBar.style.width = "0%";
   fileInput.value = "";
-  state.cutout = null;
+  state.cutoutImg = null;
+  state.cutoutCanvas = null;
   state.bgType = "transparent";
   state.bgImage = null;
+  setEraseMode(false);
 }
 
 // ---- compositing ----------------------------------------------------------
@@ -103,12 +110,12 @@ function paint(ctx, w, h, opaqueFallback) {
   } else if (opaqueFallback) {
     ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);
   }
-  ctx.drawImage(state.cutout, 0, 0, w, h);
+  ctx.drawImage(state.cutoutCanvas, 0, 0, w, h);
 }
 
 function render() {
-  if (!state.cutout) return;
-  const w = state.cutout.naturalWidth, h = state.cutout.naturalHeight;
+  if (!state.cutoutCanvas) return;
+  const w = state.cutoutCanvas.width, h = state.cutoutCanvas.height;
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, w, h);
@@ -118,7 +125,7 @@ function render() {
 }
 
 function updateDownload() {
-  const w = state.cutout.naturalWidth, h = state.cutout.naturalHeight;
+  const w = state.cutoutCanvas.width, h = state.cutoutCanvas.height;
   const ex = document.createElement("canvas");
   ex.width = w; ex.height = h;
   const isJpg = state.format === "jpg";
@@ -164,9 +171,14 @@ async function processImage(source) {
 
     const img = new Image();
     img.onload = () => {
-      state.cutout = img;
+      state.cutoutImg = img;
+      const cc = document.createElement("canvas");
+      cc.width = img.naturalWidth; cc.height = img.naturalHeight;
+      cc.getContext("2d").drawImage(img, 0, 0);
+      state.cutoutCanvas = cc;
       loader.hidden = true;
       bgControls.hidden = false;
+      setEraseMode(false);
       render();
     };
     img.src = URL.createObjectURL(blob);
@@ -225,6 +237,51 @@ function initControls() {
   });
 
   $("bg-format").addEventListener("change", (e) => { state.format = e.target.value; updateDownload(); });
+
+  // --- eraser ---
+  $("erase-toggle").addEventListener("click", () => setEraseMode(!state.eraseMode));
+  $("brush-size").addEventListener("input", (e) => { state.brush = Number(e.target.value); });
+  $("undo-erase").addEventListener("click", () => {
+    if (!state.cutoutImg || !state.cutoutCanvas) return;
+    const ctx = state.cutoutCanvas.getContext("2d");
+    ctx.clearRect(0, 0, state.cutoutCanvas.width, state.cutoutCanvas.height);
+    ctx.drawImage(state.cutoutImg, 0, 0);
+    render();
+  });
+
+  // pointer painting on the visible canvas
+  const start = (e) => { if (state.eraseMode) { state.erasing = true; eraseAt(e); } };
+  const move = (e) => { if (state.eraseMode && state.erasing) { e.preventDefault(); eraseAt(e); } };
+  const end = () => { state.erasing = false; };
+  canvas.addEventListener("pointerdown", start);
+  canvas.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", end);
+}
+
+function setEraseMode(on) {
+  state.eraseMode = on;
+  state.erasing = false;
+  const btn = $("erase-toggle");
+  if (btn) { btn.classList.toggle("active", on); btn.setAttribute("aria-pressed", String(on)); }
+  canvas.classList.toggle("erasing", on);
+}
+
+function eraseAt(e) {
+  const cc = state.cutoutCanvas;
+  if (!cc) return;
+  const rect = canvas.getBoundingClientRect();
+  const sx = cc.width / rect.width, sy = cc.height / rect.height;
+  const x = (e.clientX - rect.left) * sx;
+  const y = (e.clientY - rect.top) * sy;
+  const r = (state.brush / 2) * sx; // brush is in display px → canvas px
+  const ctx = cc.getContext("2d");
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  render();
 }
 
 function setActiveChip(type) {
